@@ -1,5 +1,8 @@
 use std::env;
 use std::process::Command;
+use std::str;
+
+use std::path::Path;
 
 /*
 
@@ -29,13 +32,49 @@ fn dothethings() -> Result<(),String> {
   let repo = into_err(iter.next(),"repo not found")?;
   let target = into_err(iter.next(),"target not found")?;
 
-  let dewit = Command::new("git")
-    .args(&["clone", repo.as_str(), target.as_str()])
+  let dirarg = format!("--git-dir={}/.git", target).to_string();
+
+  if Path::new(target.as_str()).exists() {
+    println!("path exists!");
+  }
+  else {
+    println!("path doesnt exists, cloning!i {}", dirarg);
+    // clone!
+    let clone = Command::new("git")
+      .args(&["clone", repo.as_str(), target.as_str()])
+      .output()
+      .expect("failed to execute 'git' command");
+
+  }
+
+  // check the revision
+  let current_rev = Command::new("git")
+    .args(&[dirarg.as_str(),"rev-parse", "HEAD"])
     .output()
     .expect("failed to execute 'git' command");
 
-  dewit.stdout;
+  let revstring = match str::from_utf8(&current_rev.stdout) {
+    Ok(rs) => Ok(rs),
+    Err(_) => Err("utf8 conversion error in revision string!"),
+  }?;
+  if revstring.trim() == revision.as_str() {
+    println!("they're equal")
+  }
+  else
+  {
+    // they don't match, do a checkout.
+    let checkout = Command::new("git")
+      .args(&["checkout", target.as_str()])
+      .output()
+      .expect("failed to execute 'git' command");
+
+    println!("clone result: {:?}!", checkout)
+  }
+
+  println!("revstring: {:?}", revstring);  println!("currentrev: {:?}", current_rev);
+
   Ok(())
+}
   /*
   match iter.next() {
     Some(revision) => {
@@ -62,4 +101,3 @@ fn dothethings() -> Result<(),String> {
     }
   }
   */
-}
