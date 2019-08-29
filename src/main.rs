@@ -38,43 +38,63 @@ fn dothethings() -> Result<(),String> {
     println!("path exists!");
   }
   else {
-    println!("path doesnt exists, cloning!i {}", dirarg);
+    println!("'{}' doesnt exist, cloning! {}", target, dirarg);
     // clone!
     let clone = Command::new("git")
       .args(&["clone", repo.as_str(), target.as_str()])
       .output()
       .expect("failed to execute 'git' command");
 
-  }
+    println!("cloned repo: {}:", repo); 
+  };
 
-  // check the revision
-  let current_rev = Command::new("git")
-    .args(&[dirarg.as_str(),"rev-parse", "HEAD"])
-    .output()
-    .expect("failed to execute 'git' command");
+  let checkrev = || -> Result<bool,String> {
+    // check the revision
+    let current_rev = Command::new("git")
+      .args(&[dirarg.as_str(),"rev-parse", "HEAD"])
+      .output()
+      .expect("failed to execute 'git' command");
 
-  let revstring = match str::from_utf8(&current_rev.stdout) {
-    Ok(rs) => Ok(rs),
-    Err(_) => Err("utf8 conversion error in revision string!"),
-  }?;
-  if revstring.trim() == revision.as_str() {
-    println!("they're equal")
+    let revstring = match str::from_utf8(&current_rev.stdout) {
+      Ok(rs) => Ok(rs),
+      Err(_) => Err("utf8 conversion error in revision string!"),
+    }?;
+    Ok( revstring.trim() == revision.as_str())
+   };
+
+  if checkrev()? {
+    println!("revision matches for repo: {}", repo);
+    Ok(())
   }
   else
   {
     // they don't match, do a checkout.
     let checkout = Command::new("git")
-      .args(&["checkout", target.as_str()])
+      .args(&[dirarg.as_str(), "checkout", revision.as_str()])
       .output()
       .expect("failed to execute 'git' command");
 
-    println!("clone result: {:?}!", checkout)
+    println!("checkout result: {:?}!", checkout);
+
+    if checkrev()? {
+      println!("success!");
+      Ok(())
+    }
+    else
+    {
+      Err(format!("unable to check out revision for repo: {}", repo))
+    }
   }
+}
+
+/*
+{
+  }
+else
+  
 
   println!("revstring: {:?}", revstring);  println!("currentrev: {:?}", current_rev);
-
-  Ok(())
-}
+*/
   /*
   match iter.next() {
     Some(revision) => {
