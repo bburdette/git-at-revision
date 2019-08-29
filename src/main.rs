@@ -40,7 +40,7 @@ fn dothethings() -> Result<(),String> {
   else {
     println!("'{}' doesnt exist, cloning! {}", target, dirarg);
     // clone!
-    let clone = Command::new("git")
+    Command::new("git")
       .args(&["clone", repo.as_str(), target.as_str()])
       .output()
       .expect("failed to execute 'git' command");
@@ -82,42 +82,8 @@ fn dothethings() -> Result<(),String> {
     }
     else
     {
-      Err(format!("unable to check out revision for repo: {}", repo))
+      Err(format!("unable to check out specified revision for repo: {}", repo))
     }
   }
 }
 
-/*
-{
-  }
-else
-  
-
-  println!("revstring: {:?}", revstring);  println!("currentrev: {:?}", current_rev);
-*/
-  /*
-  match iter.next() {
-    Some(revision) => {
-    println!("revision: {} ", revision);
-      match iter.next() {
-        Some(repo) => {
-          println!("repo: {} ", repo);
-          match iter.next() {
-            Some(target) => {
-              println!("target: {}", target);
-            }
-            None => {
-              println!("nah");
-            }
-          }
-        }
-        None => {
-          println!("nah");
-        }
-      }
-    }
-    None => {
-      println!("nah");
-    }
-  }
-  */
