@@ -10,7 +10,21 @@ gitcloneasof <revision> <repo> <target>
 
 */
 
-fn into_err<A,E>(opt : Option<A>, err : E) -> Result<A,E> {
+/*
+TODO:
+  - fail when the repo is dirty.
+  - also check for untracked files.
+  - if the target has no .git (like its the parent dir), uh?  maybe fail?
+    - could just print a better error message.
+    - or, somehow the parent dir should be enough?
+  - the temptation to modify the gitdeps/ repos will be strong!
+    how to deal with this?
+    dirty flag to build script.
+    production disables dirty flag.
+    git hooks?
+*/
+
+fn into_err<A, E>(opt: Option<A>, err: E) -> Result<A, E> {
   match opt {
     Some(val) => Ok(val),
     None => Err(err),
@@ -24,20 +38,20 @@ fn main() {
   }
 }
 
-fn dothethings() -> Result<(),String> {
+fn dothethings() -> Result<(), String> {
   let args = env::args();
   let mut iter = args.skip(1); // skip the program name
 
-  let revision = into_err(iter.next(),"revision not found")?;
-  let repo = into_err(iter.next(),"repo not found")?;
-  let target = into_err(iter.next(),"target not found")?;
+  let revision = into_err(iter.next(), "revision not found")?;
+  let repo = into_err(iter.next(), "repo not found")?;
+  let target = into_err(iter.next(), "target not found")?;
 
   let dirarg = format!("--git-dir={}/.git", target).to_string();
+  let worktreearg = format!("--work-tree={}", target).to_string();
 
   if Path::new(target.as_str()).exists() {
     println!("path exists!");
-  }
-  else {
+  } else {
     println!("'{}' doesnt exist, cloning! {}", target, dirarg);
     // clone!
     Command::new("git")
@@ -45,13 +59,13 @@ fn dothethings() -> Result<(),String> {
       .output()
       .expect("failed to execute 'git' command");
 
-    println!("cloned repo: {}:", repo); 
+    println!("cloned repo: {}:", repo);
   };
 
-  let checkrev = || -> Result<bool,String> {
-    // check the revision
+  // function to check the revision
+  let checkrev = || -> Result<bool, String> {
     let current_rev = Command::new("git")
-      .args(&[dirarg.as_str(),"rev-parse", "HEAD"])
+      .args(&[dirarg.as_str(), "rev-parse", "HEAD"])
       .output()
       .expect("failed to execute 'git' command");
 
@@ -59,18 +73,21 @@ fn dothethings() -> Result<(),String> {
       Ok(rs) => Ok(rs),
       Err(_) => Err("utf8 conversion error in revision string!"),
     }?;
-    Ok( revstring.trim() == revision.as_str())
-   };
+    Ok(revstring.trim() == revision.as_str())
+  };
 
   if checkrev()? {
     println!("revision matches for repo: {}", repo);
     Ok(())
-  }
-  else
-  {
+  } else {
     // they don't match, do a checkout.
     let checkout = Command::new("git")
-      .args(&[dirarg.as_str(), "checkout", revision.as_str()])
+      .args(&[
+        dirarg.as_str(),
+        worktreearg.as_str(),
+        "checkout",
+        revision.trim(),
+      ])
       .output()
       .expect("failed to execute 'git' command");
 
@@ -79,11 +96,36 @@ fn dothethings() -> Result<(),String> {
     if checkrev()? {
       println!("success!");
       Ok(())
-    }
-    else
-    {
-      Err(format!("unable to check out specified revision for repo: {}", repo))
+    } else {
+      // ok try a fetch and then a checkout.
+      let fetch = Command::new("git")
+        .args(&[dirarg.as_str(), worktreearg.as_str(), "fetch"])
+        .output()
+        .expect("failed to execute 'git' command");
+
+      println!("git fetch result: {:?}", fetch);
+
+      let checkout = Command::new("git")
+        .args(&[
+          dirarg.as_str(),
+          worktreearg.as_str(),
+          "checkout",
+          revision.trim(),
+        ])
+        .output()
+        .expect("failed to execute 'git' command");
+
+      println!("checkout2 result: {:?}!", checkout);
+
+      if checkrev()? {
+        println!("success!");
+        Ok(())
+      } else {
+        Err(format!(
+          "unable to check out specified revision for repo: {}",
+          repo
+        ))
+      }
     }
   }
 }
-
