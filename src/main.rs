@@ -105,7 +105,7 @@ fn dothethings() -> Result<bool, String> {
   // git ls-files --others
   let checkuntracked = || -> bool {
     let res = Command::new("git")
-      .args(&[dirarg.as_str(), worktreearg.as_str(), "ls-files", "--others"])
+      .args(&[dirarg.as_str(), worktreearg.as_str(), "ls-files", "--others", "--exclude-standard"])
       .output()
       .expect("failed to execute 'git' command");
     let untracked = match str::from_utf8(&res.stdout) {
