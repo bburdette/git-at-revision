@@ -52,8 +52,7 @@ fn dothethings() -> Result<bool, String> {
 
   // with zero args, print the syntax.
   if iter.len() == 0 {
-    println!("command syntax: ");
-    println!("gitcloneasof <revision> <repo> <targetdir> <--dirtyok>");
+    println!("git-at-revision <revision> <repo> <targetdir> <--dirtyok>");
     return Ok(false);
   }
 
