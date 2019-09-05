@@ -121,10 +121,10 @@ fn dothethings() -> Result<bool, String> {
     let cd = checkdirty();
     let ut = checkuntracked();
     if cd {
-      println!("failure:  repo has dirty files: {}", target)
+      println!("failure:  directory has dirty files: {}", target)
     }
     if ut {
-      println!("failure:  repo has untracked files {}", target)
+      println!("failure:  directory has untracked files {}", target)
     };
     if cd || ut {
       return Ok(false);
@@ -135,8 +135,9 @@ fn dothethings() -> Result<bool, String> {
     println!("revision matches for repo: {}", repo);
     Ok(true)
   } else {
+    println!("{} revision doesn't match; attempting checkout", repo);
     // they don't match, do a checkout.
-    let checkout = Command::new("git")
+    Command::new("git")
       .args(&[
         dirarg.as_str(),
         worktreearg.as_str(),
@@ -146,21 +147,19 @@ fn dothethings() -> Result<bool, String> {
       .output()
       .expect("failed to execute 'git' command");
 
-    println!("checkout result: {:?}!", checkout);
-
     if checkrev()? {
-      println!("success!");
+      println!("revision matches for repo: {}", repo);
       Ok(true)
     } else {
+
+      println!("checkout failed; trying git fetch and another checkout.");
       // ok try a fetch and then a checkout.
-      let fetch = Command::new("git")
+      Command::new("git")
         .args(&[dirarg.as_str(), worktreearg.as_str(), "fetch"])
         .output()
         .expect("failed to execute 'git' command");
 
-      println!("git fetch result: {:?}", fetch);
-
-      let checkout = Command::new("git")
+      Command::new("git")
         .args(&[
           dirarg.as_str(),
           worktreearg.as_str(),
@@ -170,10 +169,8 @@ fn dothethings() -> Result<bool, String> {
         .output()
         .expect("failed to execute 'git' command");
 
-      println!("checkout2 result: {:?}!", checkout);
-
       if checkrev()? {
-        println!("success!");
+        println!("revision matches for repo: {}", repo);
         Ok(true)
       } else {
         Err(format!(
