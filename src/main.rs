@@ -34,7 +34,6 @@ fn main() {
   match dothethings() {
     Ok(success) => {
       if success {
-        println!("success!");
         std::process::exit(0);
       } else {
         std::process::exit(1);
@@ -118,21 +117,20 @@ fn dothethings() -> Result<bool, String> {
   };
 
 
+  // if dirtyok is off, check for both untracked and dirty files.
   if !dirtyok {
     let cd = checkdirty();
     let ut = checkuntracked();
     if cd {
-      println!("failure:  repo has dirty files!")
+      println!("failure:  repo has dirty files: {}", target)
     }
     if ut {
-      println!("failure:  repo has untracked files!")
+      println!("failure:  repo has untracked files {}", target)
     };
     if cd || ut {
       return Ok(false);
     };
-  } else {
-    println!("not checking for a dirty repo!");
-  }
+  } 
 
   if checkrev()? {
     println!("revision matches for repo: {}", repo);
