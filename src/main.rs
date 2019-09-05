@@ -33,22 +33,36 @@ fn into_err<A, E>(opt: Option<A>, err: E) -> Result<A, E> {
 
 fn main() {
   match dothethings() {
-    Ok(_) => println!("success!"),
+    Ok(success) => {
+      if success {
+        println!("success!");
+        std::process::exit(0);
+      } else {
+        std::process::exit(1);
+      }
+    }
     Err(e) => {
       println!("error: {:?}", e);
-      println!("command syntax: ");
-      println!("gitcloneasof <revision> <repo> <targetdir> <--dirtyok>");
+      std::process::exit(1);
     }
   }
 }
 
-fn dothethings() -> Result<(), String> {
+fn dothethings() -> Result<bool, String> {
   let args = env::args();
   let mut iter = args.skip(1); // skip the program name
+
+  // with zero args, print the syntax.
+  if iter.len() == 0 {
+    println!("command syntax: ");
+    println!("gitcloneasof <revision> <repo> <targetdir> <--dirtyok>");
+    return Ok(false);
+  }
 
   let revision = into_err(iter.next(), "revision not found")?;
   let repo = into_err(iter.next(), "repo not found")?;
   let target = into_err(iter.next(), "target not found")?;
+  let dirtyok = iter.next() == Some("--dirtyok".to_string());
 
   let dirarg = format!("--git-dir={}/.git", target).to_string();
   let worktreearg = format!("--work-tree={}", target).to_string();
@@ -80,9 +94,27 @@ fn dothethings() -> Result<(), String> {
     Ok(revstring.trim() == revision.as_str())
   };
 
+  // dirty check function.
+  // git diff-index --quiet HEAD --
+  let checkdirty = || -> bool {
+    let wat = Command::new("git")
+      .args(&[dirarg.as_str(), "diff-index", "--quiet", "HEAD", "--"])
+      .output()
+      .expect("failed to execute 'git' command");
+    println!("wat: {:?}", wat);
+    !wat.status.success()
+  };
+
+  if !dirtyok {
+    println!("dirty? {}", checkdirty());
+    return Ok(false);
+  } else {
+    println!("not checking for a dirty repo!");
+  }
+
   if checkrev()? {
     println!("revision matches for repo: {}", repo);
-    Ok(())
+    Ok(true)
   } else {
     // they don't match, do a checkout.
     let checkout = Command::new("git")
@@ -99,7 +131,7 @@ fn dothethings() -> Result<(), String> {
 
     if checkrev()? {
       println!("success!");
-      Ok(())
+      Ok(true)
     } else {
       // ok try a fetch and then a checkout.
       let fetch = Command::new("git")
@@ -123,7 +155,7 @@ fn dothethings() -> Result<(), String> {
 
       if checkrev()? {
         println!("success!");
-        Ok(())
+        Ok(true)
       } else {
         Err(format!(
           "unable to check out specified revision for repo: {}",
