@@ -12,7 +12,6 @@ gitcloneasof <revision> <repo> <targetdir> <--dirtyok>
 
 /*
 TODO:
-  - fail when the repo is dirty.
   - also check for untracked files.
   - if the target has no .git (like its the parent dir), uh?  maybe fail?
     - could just print a better error message.
@@ -68,7 +67,7 @@ fn dothethings() -> Result<bool, String> {
   let worktreearg = format!("--work-tree={}", target).to_string();
 
   if Path::new(target.as_str()).exists() {
-    println!("path exists!");
+    // println!("path exists!");
   } else {
     println!("'{}' doesnt exist, cloning! {}", target, dirarg);
     // clone!
@@ -98,16 +97,39 @@ fn dothethings() -> Result<bool, String> {
   // git diff-index --quiet HEAD --
   let checkdirty = || -> bool {
     let wat = Command::new("git")
-      .args(&[dirarg.as_str(), "diff-index", "--quiet", "HEAD", "--"])
+      .args(&[dirarg.as_str(), worktreearg.as_str(), "diff-index", "--quiet", "HEAD", "--"])
       .output()
       .expect("failed to execute 'git' command");
-    println!("wat: {:?}", wat);
     !wat.status.success()
   };
 
+  // untracked files check ftn.
+  // git ls-files --others
+  let checkuntracked = || -> bool {
+    let res = Command::new("git")
+      .args(&[dirarg.as_str(), worktreearg.as_str(), "ls-files", "--others"])
+      .output()
+      .expect("failed to execute 'git' command");
+    let untracked = match str::from_utf8(&res.stdout) {
+      Ok(rs) => Ok(rs),
+      Err(_) => Err("utf8 conversion error in untracked check!"),
+    };
+    untracked != Ok("")
+  };
+
+
   if !dirtyok {
-    println!("dirty? {}", checkdirty());
-    return Ok(false);
+    let cd = checkdirty();
+    let ut = checkuntracked();
+    if cd {
+      println!("failure:  repo has dirty files!")
+    }
+    if ut {
+      println!("failure:  repo has untracked files!")
+    };
+    if cd || ut {
+      return Ok(false);
+    };
   } else {
     println!("not checking for a dirty repo!");
   }
