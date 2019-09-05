@@ -6,7 +6,7 @@ use std::path::Path;
 
 /*
 
-gitcloneasof <revision> <repo> <target>
+gitcloneasof <revision> <repo> <targetdir> <--dirtyok>
 
 */
 
@@ -34,7 +34,11 @@ fn into_err<A, E>(opt: Option<A>, err: E) -> Result<A, E> {
 fn main() {
   match dothethings() {
     Ok(_) => println!("success!"),
-    Err(e) => println!("error: {:?}", e),
+    Err(e) => {
+      println!("error: {:?}", e);
+      println!("command syntax: ");
+      println!("gitcloneasof <revision> <repo> <targetdir> <--dirtyok>");
+    }
   }
 }
 
