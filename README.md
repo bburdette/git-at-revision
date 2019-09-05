@@ -3,27 +3,26 @@
 This is a little commandline gadget to clone a git repo as of a certain
 revision (SHA).  Unless you already did that in which case nothing happens.
 
-get-at-revision *sha* *repo-url* *target-directory*
+get-at-revision \<sha\> \<repo-url\> \<target-directory\> --dirtyok
+
+program logic is more or less like this:
   
-    does the target exist?
+    does the target dir exist?
       yes - 
         is it the right revision?
           yes - 
-            is it modified?
+            is it modified, or are there untracked files?
               yes - 
-                reset, or error.
+                error, unless --dirtyok.
               no - 
                 success.
           no - 
-            is it modified?
-              yes - error.
+            checkout revision.  success?
+              yes - return.
               no - 
-                checkout revision.  success?
-                  yes - return.
-                  no - 
-                    git pull, retry checkout.  success?
-                      no - fail.
-                      yes - success.
+                git fetch, retry checkout.  success?
+                  no - fail.
+                  yes - success.
       no - 
         clone repo.  success?
           yes - checkout revision.  success?
